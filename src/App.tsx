@@ -11,31 +11,43 @@ import { Button } from "@/components/ui/button";
 import { Box, Center, HStack, Stack } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import "./App.css";
-
 interface CellInterface {
+  id: number;
   value: number;
-
   // the position of the cell in the board
   // this is used to determine the animation of the cell when it moves
   // todo: to be implemented later
-  row?: number;
-  column?: number;
+  row: number;
+  column: number;
+}
+
+interface BoardInterface {
+  cells: CellInterface[];
 }
 
 // swap 2 cells
 const swap = (a: CellInterface, b: CellInterface) => {
   // mutating the cells
   // todo: use immutability
-  [a.value, b.value] = [b.value, a.value];
+  [a.column, b.column] = [b.column, a.column];
+  // [a.row, b.row] = [b.row, a.row];
 };
 
-// merge 2 cells by doubling the value of the second cell and setting the value of the first cell to 0
-// later on, we will animate the merging of the cells so the row and column properties will be useful
-const merge = (a: CellInterface, b: CellInterface) => {
-  // mutating the cells
-  // todo: use immutability
-  b.value *= 2;
-  a.value = 0;
+// merge 2 cells by
+const merge = (cellA: CellInterface, cellB: CellInterface) => {
+  swap(cellA, cellB);
+  cellA.value *= 2;
+  cellB.value = 0;
+};
+
+// sort cells by their column
+const sortCellsByColumn = (cells: CellInterface[]) => {
+  return cells.sort((a, b) => a.column - b.column);
+};
+
+// sort cells by their id
+const sortCellsById = (cells: CellInterface[]) => {
+  return cells.sort((a, b) => a.id - b.id);
 };
 
 // get the background color of the cell based on its value
@@ -67,6 +79,27 @@ const getRandomPosition = () => {
 //   return emptyCells[Math.floor(Math.random() * emptyCells.length)];
 // }
 
+interface CellProps {
+  cell: CellInterface;
+}
+function Cell({ cell }: CellProps) {
+  return (
+    <Center
+      w="60px"
+      h="60px"
+      bg={getCellBgColor(cell.value)}
+      color="black"
+      position="absolute"
+      transform={`translate(${cell.column * 60}px, ${cell.row * 60}px)`}
+      transition={`transform 0.2s`}
+    >
+      <Box as="span" fontWeight="bold" fontSize="md">
+        {cell.value}
+      </Box>
+    </Center>
+  );
+}
+
 function App() {
   // storing the game state
   const [board, setBoard] = useState<CellInterface[]>([]);
@@ -76,8 +109,12 @@ function App() {
 
   // starting the game with one row of 4 tiles
   const startGame = () => {
-    const newBoard = Array.from({ length: 4 }, () => ({
+    // create a new board with 4 empty cells with
+    const newBoard = Array.from({ length: 4 }, (_v, i) => ({
+      id: i,
       value: 0,
+      row: 0,
+      column: i,
     }));
     newBoard[getRandomPosition()].value = getRandomTileValue();
     newBoard[getRandomPosition()].value = getRandomTileValue();
@@ -86,6 +123,7 @@ function App() {
 
   const stepRight = () => {
     const row = [...board];
+    sortCellsByColumn(row);
     let lastMovableNonZeroCellPosition = row.length - 2;
     // 2 0 4 2
     {
@@ -105,6 +143,7 @@ function App() {
         lastMovableNonZeroCellPosition < row.length - 1 &&
         row[lastMovableNonZeroCellPosition + 1].value === 0
       ) {
+        console.log("swap");
         swap(
           row[lastMovableNonZeroCellPosition],
           row[lastMovableNonZeroCellPosition + 1]
@@ -115,6 +154,7 @@ function App() {
         row[lastMovableNonZeroCellPosition].value ===
         row[lastMovableNonZeroCellPosition + 1].value
       ) {
+        console.log("merge");
         // merge the cells
         merge(
           row[lastMovableNonZeroCellPosition],
@@ -122,6 +162,7 @@ function App() {
         );
       }
 
+      sortCellsById(row);
       setBoard(row);
     }
   };
@@ -173,22 +214,11 @@ function App() {
         <Button color="white" onClick={startGame}>
           New Game
         </Button>
-        <HStack h="60px" w="240px">
-          {board.map((cell: CellInterface, i: number) => (
-            <Center
-              key={`${cell.value}-${i}`}
-              w="60px"
-              h="60px"
-              bg={getCellBgColor(cell.value)}
-              color="black"
-              position="relative"
-            >
-              <Box as="span" fontWeight="bold" fontSize="md">
-                {cell.value}
-              </Box>
-            </Center>
+        <Box h="60px" w="240px">
+          {board.map((cell: CellInterface) => (
+            <Cell key={cell.id} cell={cell} />
           ))}
-        </HStack>
+        </Box>
       </Stack>
     </>
   );
