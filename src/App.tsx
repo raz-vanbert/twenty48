@@ -25,6 +25,12 @@ interface BoardInterface {
   cells: CellInterface[];
 }
 
+enum MoveType {
+  NONE,
+  SWAP,
+  MERGE,
+}
+
 // swap 2 cells
 const swap = (a: CellInterface, b: CellInterface) => {
   // mutating the cells
@@ -108,7 +114,7 @@ function App() {
   const [over, setOver] = useState<boolean>(false);
 
   // starting the game with one row of 4 tiles
-  const startGame = () => {
+  const newGame = () => {
     // create a new board with 4 empty cells with
     const newBoard = Array.from({ length: 4 }, (_v, i) => ({
       id: i,
@@ -121,7 +127,8 @@ function App() {
     setBoard(newBoard);
   };
 
-  const stepRight = () => {
+  const stepRight = (): MoveType => {
+    let moveMade = MoveType.NONE;
     const row = [...board];
     sortCellsByColumn(row);
     let lastMovableNonZeroCellPosition = row.length - 2;
@@ -149,6 +156,7 @@ function App() {
           row[lastMovableNonZeroCellPosition + 1]
         );
         lastMovableNonZeroCellPosition++;
+        moveMade = MoveType.SWAP;
         // if the cell to the right is the same as the last non-zero cell, merge them
       } else if (
         row[lastMovableNonZeroCellPosition].value ===
@@ -160,10 +168,15 @@ function App() {
           row[lastMovableNonZeroCellPosition],
           row[lastMovableNonZeroCellPosition + 1]
         );
+        moveMade = MoveType.MERGE;
+      } else {
+        console.log("no more moves to be made");
+        return moveMade;
       }
 
       sortCellsById(row);
       setBoard(row);
+      return moveMade;
     }
   };
 
@@ -171,7 +184,11 @@ function App() {
 
   // moving the tiles to the right
   const moveRight = () => {
-    const newBoard = [...board];
+    // recursivelly call stepRight until there are no more moves to be made
+    let move;
+    do {
+      move = stepRight();
+    } while (move !== MoveType.NONE);
   };
 
   // moving the tiles to the left
@@ -188,6 +205,9 @@ function App() {
         break;
       case "ArrowLeft":
         moveLeft();
+        break;
+      case "n":
+        newGame();
         break;
     }
   };
@@ -211,7 +231,7 @@ function App() {
             Step Right
           </Button>
         </HStack>
-        <Button color="white" onClick={startGame}>
+        <Button color="white" onClick={newGame}>
           New Game
         </Button>
         <Box h="60px" w="240px">
