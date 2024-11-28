@@ -8,7 +8,7 @@
 // See https://en.wikipedia.org/wiki/2048_(video_game) for more information
 
 import { Button } from "@/components/ui/button";
-import { Box, Center, HStack, Stack } from "@chakra-ui/react";
+import { Box, Center, Stack } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import "./App.css";
 interface CellInterface {
@@ -124,6 +124,7 @@ function App() {
     }));
     newBoard[getRandomPosition()].value = getRandomTileValue();
     newBoard[getRandomPosition()].value = getRandomTileValue();
+    setScore(0);
     setBoard(newBoard);
   };
 
@@ -132,55 +133,102 @@ function App() {
     const row = [...board];
     sortCellsByColumn(row);
     let lastMovableNonZeroCellPosition = row.length - 2;
-    // 2 0 4 2
-    {
-      // iterate from right to left to find the last non-zero cell
-      for (let i = lastMovableNonZeroCellPosition; i >= 0; i--) {
-        if (
-          row[i].value !== 0 &&
-          (row[i + 1].value === 0 || row[i].value === row[i + 1].value)
-        ) {
-          lastMovableNonZeroCellPosition = i;
-          break;
-        }
-      }
 
-      // swap the last non-zero cell with the cell to its right if that cell is zero
+    // iterate from right to left to find the last non-zero cell
+    for (let i = lastMovableNonZeroCellPosition; i >= 0; i--) {
       if (
-        lastMovableNonZeroCellPosition < row.length - 1 &&
-        row[lastMovableNonZeroCellPosition + 1].value === 0
+        row[i].value !== 0 &&
+        (row[i + 1].value === 0 || row[i].value === row[i + 1].value)
       ) {
-        console.log("swap");
-        swap(
-          row[lastMovableNonZeroCellPosition],
-          row[lastMovableNonZeroCellPosition + 1]
-        );
-        lastMovableNonZeroCellPosition++;
-        moveMade = MoveType.SWAP;
-        // if the cell to the right is the same as the last non-zero cell, merge them
-      } else if (
-        row[lastMovableNonZeroCellPosition].value ===
-        row[lastMovableNonZeroCellPosition + 1].value
-      ) {
-        console.log("merge");
-        // merge the cells
-        merge(
-          row[lastMovableNonZeroCellPosition],
-          row[lastMovableNonZeroCellPosition + 1]
-        );
-        moveMade = MoveType.MERGE;
-      } else {
-        console.log("no more moves to be made");
-        return moveMade;
+        lastMovableNonZeroCellPosition = i;
+        break;
       }
+    }
 
-      sortCellsById(row);
-      setBoard(row);
+    // swap the last non-zero cell with the cell to its right if that cell is zero
+    if (
+      lastMovableNonZeroCellPosition < row.length - 1 &&
+      row[lastMovableNonZeroCellPosition + 1].value === 0
+    ) {
+      swap(
+        row[lastMovableNonZeroCellPosition],
+        row[lastMovableNonZeroCellPosition + 1]
+      );
+      lastMovableNonZeroCellPosition++;
+      moveMade = MoveType.SWAP;
+      // if the cell to the right is the same as the last non-zero cell, merge them
+    } else if (
+      row[lastMovableNonZeroCellPosition].value ===
+      row[lastMovableNonZeroCellPosition + 1].value
+    ) {
+      // merge the cells
+      merge(
+        row[lastMovableNonZeroCellPosition],
+        row[lastMovableNonZeroCellPosition + 1]
+      );
+      moveMade = MoveType.MERGE;
+      // increment the score
+      setScore(score + row[lastMovableNonZeroCellPosition].value);
+    } else {
       return moveMade;
     }
+
+    sortCellsById(row);
+    setBoard(row);
+    return moveMade;
   };
 
-  const stepLeft = () => {};
+  // we could also reverse the row and call stepRight
+
+  const stepLeft = (): MoveType => {
+    let moveMade = MoveType.NONE;
+    const row = [...board];
+    sortCellsByColumn(row);
+    let firstMovableNonZeroCellPosition = 1;
+
+    // iterate from left to right to find the first non-zero cell
+    for (let i = firstMovableNonZeroCellPosition; i < row.length; i++) {
+      if (
+        row[i].value !== 0 &&
+        (row[i - 1].value === 0 || row[i].value === row[i - 1].value)
+      ) {
+        firstMovableNonZeroCellPosition = i;
+        break;
+      }
+    }
+
+    // swap the first non-zero cell with the cell to its left if that cell is zero
+    if (
+      firstMovableNonZeroCellPosition > 0 &&
+      row[firstMovableNonZeroCellPosition - 1].value === 0
+    ) {
+      swap(
+        row[firstMovableNonZeroCellPosition],
+        row[firstMovableNonZeroCellPosition - 1]
+      );
+      firstMovableNonZeroCellPosition--;
+      moveMade = MoveType.SWAP;
+      // if the cell to the left is the same as the first non-zero cell, merge them
+    } else if (
+      row[firstMovableNonZeroCellPosition].value ===
+      row[firstMovableNonZeroCellPosition - 1].value
+    ) {
+      // merge the cells
+      merge(
+        row[firstMovableNonZeroCellPosition],
+        row[firstMovableNonZeroCellPosition - 1]
+      );
+      moveMade = MoveType.MERGE;
+      // increment the score
+      setScore(score + row[firstMovableNonZeroCellPosition].value);
+    } else {
+      return moveMade;
+    }
+
+    sortCellsById(row);
+    setBoard(row);
+    return moveMade;
+  };
 
   // moving the tiles to the right
   const moveRight = () => {
@@ -193,13 +241,22 @@ function App() {
 
   // moving the tiles to the left
   const moveLeft = () => {
-    const newBoard = [...board];
+    let move;
+    do {
+      move = stepLeft();
+    } while (move !== MoveType.NONE);
   };
 
   // handling the key press
   const handleKeyDown = (event: KeyboardEvent) => {
     if (won || over) return;
     switch (event.key) {
+      case "a":
+        stepLeft();
+        break;
+      case "d":
+        stepRight();
+        break;
       case "ArrowRight":
         moveRight();
         break;
@@ -223,14 +280,10 @@ function App() {
   return (
     <>
       <Stack>
-        <HStack>
-          <Button color="white" onClick={stepLeft}>
-            Step Left
-          </Button>
-          <Button color="white" onClick={stepRight}>
-            Step Right
-          </Button>
-        </HStack>
+        <Box>
+          <h1>2048</h1>
+          <p>Score: {score}</p>
+        </Box>
         <Button color="white" onClick={newGame}>
           New Game
         </Button>
