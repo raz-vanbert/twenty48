@@ -9,6 +9,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Box, Center, Stack } from "@chakra-ui/react";
+import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import "./App.css";
 interface CellInterface {
@@ -21,9 +22,8 @@ interface CellInterface {
   column: number;
 }
 
-interface RowInterface {
-  cells: CellInterface[];
-}
+interface RowInterface extends Array<CellInterface> {}
+interface BoardInterface extends Array<RowInterface> {}
 
 enum MoveType {
   NONE,
@@ -47,18 +47,18 @@ const merge = (cellA: CellInterface, cellB: CellInterface) => {
 };
 
 // sort cells by their column
-const sortCellsByColumn = (cells: CellInterface[]) => {
+const sortCellsByColumn = (cells: RowInterface) => {
   return cells.sort((a, b) => a.column - b.column);
 };
 
 // sort cells by their id
-const sortCellsById = (cells: CellInterface[]) => {
+const sortCellsById = (cells: RowInterface) => {
   return cells.sort((a, b) => a.id - b.id);
 };
 
 const stepRowRight = (
-  row: CellInterface[]
-): { newRow: CellInterface[]; moveMade: MoveType } => {
+  row: RowInterface
+): { newRow: RowInterface; moveMade: MoveType } => {
   let moveMade = MoveType.NONE;
 
   if (row.reduce((acc, cell) => acc + cell.value, 0) === 0) {
@@ -117,8 +117,8 @@ const stepRowRight = (
 // we could also reverse the row and call stepRight
 
 const stepRowLeft = (
-  row: CellInterface[]
-): { newRow: CellInterface[]; moveMade: MoveType } => {
+  row: RowInterface
+): { newRow: RowInterface; moveMade: MoveType } => {
   let moveMade = MoveType.NONE;
 
   if (row.reduce((acc, cell) => acc + cell.value, 0) === 0) {
@@ -175,9 +175,9 @@ const stepRowLeft = (
 };
 
 const stepRight = (
-  board: CellInterface[][]
+  board: BoardInterface
 ): {
-  newBoard: CellInterface[][];
+  newBoard: BoardInterface;
   numberOfMoves: number;
 } => {
   const boardCopy = [...board];
@@ -195,9 +195,9 @@ const stepRight = (
 };
 
 const stepLeft = (
-  board: CellInterface[][]
+  board: BoardInterface
 ): {
-  newBoard: CellInterface[][];
+  newBoard: BoardInterface;
   numberOfMoves: number;
 } => {
   const boardCopy = [...board];
@@ -238,10 +238,33 @@ const getRandomPosition = () => {
   return Math.floor(Math.random() * 4);
 };
 
-// const getRandomEmptyCell = (board: CellInterface[]) => {
-//   const emptyCells = board.filter(cell => cell.value === 0);
-//   return emptyCells[Math.floor(Math.random() * emptyCells.length)];
-// }
+const flipMatrixAroundYAxis = (matrix: BoardInterface): BoardInterface => {
+  const result = cloneDeep(matrix);
+
+  result.forEach((row) => {
+    swap(row[0], row[3]);
+    swap(row[1], row[2]);
+  });
+
+  return result;
+};
+
+// flip the matrix around diagonal starting from the top left
+const flipMatrixAroundDiagonal = (matrix: BoardInterface): BoardInterface => {
+  const result = cloneDeep(matrix);
+
+  for (let i = 0; i < result.length; i++) {
+    for (let j = i; j < result.length; j++) {
+      if (i !== j) {
+        swap(result[i][j], result[j][i]);
+      }
+    }
+  }
+
+  return result;
+};
+
+// swaps the positions of 2 cells on the board
 
 interface CellProps {
   cell: CellInterface;
@@ -249,12 +272,14 @@ interface CellProps {
 function Cell({ cell }: CellProps) {
   return (
     <Center
-      w="60px"
-      h="60px"
+      w="68px"
+      h="68px"
       bg={getCellBgColor(cell.value)}
       color="black"
       position="absolute"
-      transform={`translate(${cell.column * 60}px, ${cell.row * 60}px)`}
+      border="4px solid gray.700"
+      borderRadius="4px"
+      transform={`translate(${cell.column * 68}px, ${cell.row * 68}px)`}
       transition={`transform 0.2s`}
     >
       <Box as="span" fontWeight="bold" fontSize="md">
@@ -266,7 +291,7 @@ function Cell({ cell }: CellProps) {
 
 function App() {
   // storing the game state
-  const [board, setBoard] = useState<CellInterface[][]>([[]]);
+  const [board, setBoard] = useState<BoardInterface>([[]]);
   const [score, setScore] = useState<number>(0);
   const [won, setWon] = useState<boolean>(false);
   const [over, setOver] = useState<boolean>(false);
@@ -293,43 +318,77 @@ function App() {
   // moving the tiles to the right
   const moveRight = () => {
     let moveMade = true;
+
+    const boardCopy = cloneDeep(board);
+    let result = boardCopy;
+
     do {
       // recursivelly call stepRight until there are no more moves to be made
       const { newBoard, numberOfMoves } = stepRight(board);
-      console.log("moveRight -> numberOfMoves: ", numberOfMoves);
       if (numberOfMoves === 0) {
         moveMade = false;
       } else {
-        setBoard(newBoard);
+        result = newBoard;
       }
     } while (moveMade);
+
+    // result = result.map((row) => sortCellsByColumn(row));
+    setBoard(result);
   };
+
+  // // move the tiles to the left by reversing the rows and calling stepRight
+  // const moveLeft = () => {
+  //   let moveMade = true;
+  //   const boardCopy = cloneDeep(board);
+
+  //   // reverse the column values of the cells in each row
+  //   const yMirror = boardCopy.map((row) =>
+  //     row.map((cell, index) => ({ ...cell, column: 3 - index }))
+  //   );
+
+  //   let result = boardCopy;
+
+  //   do {
+  //     const { newBoard, numberOfMoves } = stepRight(yMirror);
+  //     if (numberOfMoves === 0) {
+  //       moveMade = false;
+  //     } else {
+  //       result = newBoard;
+  //     }
+  //   } while (moveMade);
+
+  //   result = result.map((row) =>
+  //     row.map((cell) => ({ ...cell, column: 3 - cell.column }))
+  //   );
+
+  //   setBoard(result);
+  // };
 
   // moving the tiles to the left
   const moveLeft = () => {
     let moveMade = true;
+
+    const boardCopy = cloneDeep(board);
+    let result = boardCopy;
+
     do {
       // recursivelly call stepLeft until there are no more moves to be made
       const { newBoard, numberOfMoves } = stepLeft(board);
-      console.log("moveLeft -> numberOfMoves: ", numberOfMoves);
       if (numberOfMoves === 0) {
         moveMade = false;
       } else {
-        setBoard(newBoard);
+        result = newBoard;
       }
     } while (moveMade);
+
+    // result = result.map((row) => sortCellsByColumn(row));
+    setBoard(result);
   };
 
   // handling the key press
   const handleKeyDown = (event: KeyboardEvent) => {
     if (won || over) return;
     switch (event.key) {
-      case "a":
-        stepLeft();
-        break;
-      case "d":
-        stepRight();
-        break;
       case "ArrowRight":
         moveRight();
         break;
@@ -357,10 +416,18 @@ function App() {
           <h1>2048</h1>
           <p>Score: {score}</p>
         </Box>
+
         <Button color="white" onClick={newGame}>
           New Game
         </Button>
-        <Box h="60px" w="240px">
+        <Box
+          h="272px"
+          w="272px"
+          bg="gray.700"
+          borderRadius="8px"
+          padding="2"
+          boxSizing="content-box"
+        >
           {board.map((row) =>
             row.map((cell) => <Cell key={cell.id} cell={cell} />)
           )}
