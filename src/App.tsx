@@ -21,7 +21,7 @@ interface CellInterface {
   column: number;
 }
 
-interface BoardInterface {
+interface RowInterface {
   cells: CellInterface[];
 }
 
@@ -36,7 +36,7 @@ const swap = (a: CellInterface, b: CellInterface) => {
   // mutating the cells
   // todo: use immutability
   [a.column, b.column] = [b.column, a.column];
-  // [a.row, b.row] = [b.row, a.row];
+  [a.row, b.row] = [b.row, a.row];
 };
 
 // merge 2 cells by
@@ -54,6 +54,164 @@ const sortCellsByColumn = (cells: CellInterface[]) => {
 // sort cells by their id
 const sortCellsById = (cells: CellInterface[]) => {
   return cells.sort((a, b) => a.id - b.id);
+};
+
+const stepRowRight = (
+  row: CellInterface[]
+): { newRow: CellInterface[]; moveMade: MoveType } => {
+  let moveMade = MoveType.NONE;
+
+  if (row.reduce((acc, cell) => acc + cell.value, 0) === 0) {
+    return { newRow: row, moveMade };
+  }
+  // create a copy of the row
+  const rowCopy = [...row];
+
+  sortCellsByColumn(rowCopy);
+  let lastMovableNonZeroCellPosition = rowCopy.length - 2;
+
+  // iterate from right to left to find the last non-zero cell
+  for (let i = lastMovableNonZeroCellPosition; i >= 0; i--) {
+    if (
+      rowCopy[i].value !== 0 &&
+      (rowCopy[i + 1].value === 0 || rowCopy[i].value === rowCopy[i + 1].value)
+    ) {
+      lastMovableNonZeroCellPosition = i;
+      break;
+    }
+  }
+
+  // swap the last non-zero cell with the cell to its right if that cell is zero
+  if (
+    lastMovableNonZeroCellPosition < rowCopy.length - 1 &&
+    rowCopy[lastMovableNonZeroCellPosition + 1].value === 0
+  ) {
+    swap(
+      rowCopy[lastMovableNonZeroCellPosition],
+      rowCopy[lastMovableNonZeroCellPosition + 1]
+    );
+    lastMovableNonZeroCellPosition++;
+    moveMade = MoveType.SWAP;
+    // if the cell to the right is the same as the last non-zero cell, merge them
+  } else if (
+    rowCopy[lastMovableNonZeroCellPosition].value ===
+    rowCopy[lastMovableNonZeroCellPosition + 1].value
+  ) {
+    // merge the cells
+    merge(
+      rowCopy[lastMovableNonZeroCellPosition],
+      rowCopy[lastMovableNonZeroCellPosition + 1]
+    );
+    moveMade = MoveType.MERGE;
+    // increment the score
+    // todo: just return the score and increment it in the parent function
+    // setScore(score + rowCopy[lastMovableNonZeroCellPosition].value);
+  } else {
+    return { newRow: rowCopy, moveMade };
+  }
+  sortCellsById(rowCopy);
+
+  return { newRow: rowCopy, moveMade };
+};
+
+// we could also reverse the row and call stepRight
+
+const stepRowLeft = (
+  row: CellInterface[]
+): { newRow: CellInterface[]; moveMade: MoveType } => {
+  let moveMade = MoveType.NONE;
+
+  if (row.reduce((acc, cell) => acc + cell.value, 0) === 0) {
+    return { newRow: row, moveMade };
+  }
+  // create a copy of the row
+  const rowCopy = [...row];
+
+  sortCellsByColumn(rowCopy);
+  let firstMovableNonZeroCellPosition = 1;
+
+  // iterate from left to right to find the first non-zero cell
+  for (let i = firstMovableNonZeroCellPosition; i < rowCopy.length; i++) {
+    if (
+      rowCopy[i].value !== 0 &&
+      (rowCopy[i - 1].value === 0 || rowCopy[i].value === rowCopy[i - 1].value)
+    ) {
+      firstMovableNonZeroCellPosition = i;
+      break;
+    }
+  }
+
+  // swap the first non-zero cell with the cell to its left if that cell is zero
+  if (
+    firstMovableNonZeroCellPosition > 0 &&
+    rowCopy[firstMovableNonZeroCellPosition - 1].value === 0
+  ) {
+    swap(
+      rowCopy[firstMovableNonZeroCellPosition],
+      rowCopy[firstMovableNonZeroCellPosition - 1]
+    );
+    firstMovableNonZeroCellPosition--;
+    moveMade = MoveType.SWAP;
+    // if the cell to the left is the same as the first non-zero cell, merge them
+  } else if (
+    rowCopy[firstMovableNonZeroCellPosition].value ===
+    rowCopy[firstMovableNonZeroCellPosition - 1].value
+  ) {
+    // merge the cells
+    merge(
+      rowCopy[firstMovableNonZeroCellPosition],
+      rowCopy[firstMovableNonZeroCellPosition - 1]
+    );
+    moveMade = MoveType.MERGE;
+    // increment the score
+    // setScore(score + rowCopy[firstMovableNonZeroCellPosition].value);
+  } else {
+    return { newRow: rowCopy, moveMade };
+  }
+
+  sortCellsById(rowCopy);
+
+  return { newRow: rowCopy, moveMade };
+};
+
+const stepRight = (
+  board: CellInterface[][]
+): {
+  newBoard: CellInterface[][];
+  numberOfMoves: number;
+} => {
+  const boardCopy = [...board];
+  let numberOfMoves = 0;
+
+  boardCopy.forEach((row, index) => {
+    const { newRow, moveMade } = stepRowRight(row);
+    boardCopy[index] = newRow;
+    if (moveMade !== MoveType.NONE) {
+      numberOfMoves++;
+    }
+  });
+
+  return { newBoard: boardCopy, numberOfMoves };
+};
+
+const stepLeft = (
+  board: CellInterface[][]
+): {
+  newBoard: CellInterface[][];
+  numberOfMoves: number;
+} => {
+  const boardCopy = [...board];
+  let numberOfMoves = 0;
+
+  boardCopy.forEach((row, index) => {
+    const { newRow, moveMade } = stepRowLeft(row);
+    boardCopy[index] = newRow;
+    if (moveMade !== MoveType.NONE) {
+      numberOfMoves++;
+    }
+  });
+
+  return { newBoard: boardCopy, numberOfMoves };
 };
 
 // get the background color of the cell based on its value
@@ -100,7 +258,7 @@ function Cell({ cell }: CellProps) {
       transition={`transform 0.2s`}
     >
       <Box as="span" fontWeight="bold" fontSize="md">
-        {cell.value}
+        {cell.value === 0 ? "" : cell.value}
       </Box>
     </Center>
   );
@@ -108,7 +266,7 @@ function Cell({ cell }: CellProps) {
 
 function App() {
   // storing the game state
-  const [board, setBoard] = useState<CellInterface[]>([]);
+  const [board, setBoard] = useState<CellInterface[][]>([[]]);
   const [score, setScore] = useState<number>(0);
   const [won, setWon] = useState<boolean>(false);
   const [over, setOver] = useState<boolean>(false);
@@ -116,135 +274,50 @@ function App() {
   // starting the game with one row of 4 tiles
   const newGame = () => {
     // create a new board with 4 empty cells with
-    const newBoard = Array.from({ length: 4 }, (_v, i) => ({
-      id: i,
-      value: 0,
-      row: 0,
-      column: i,
-    }));
-    newBoard[getRandomPosition()].value = getRandomTileValue();
-    newBoard[getRandomPosition()].value = getRandomTileValue();
+    const newBoard = Array.from({ length: 4 }, (_, row) =>
+      Array.from({ length: 4 }, (_, column) => ({
+        id: row * 4 + column,
+        value: 0,
+        row,
+        column,
+      }))
+    );
+    newBoard[getRandomPosition()][getRandomPosition()].value =
+      getRandomTileValue();
+    newBoard[getRandomPosition()][getRandomPosition()].value =
+      getRandomTileValue();
     setScore(0);
     setBoard(newBoard);
   };
 
-  const stepRight = (): MoveType => {
-    let moveMade = MoveType.NONE;
-    const row = [...board];
-    sortCellsByColumn(row);
-    let lastMovableNonZeroCellPosition = row.length - 2;
-
-    // iterate from right to left to find the last non-zero cell
-    for (let i = lastMovableNonZeroCellPosition; i >= 0; i--) {
-      if (
-        row[i].value !== 0 &&
-        (row[i + 1].value === 0 || row[i].value === row[i + 1].value)
-      ) {
-        lastMovableNonZeroCellPosition = i;
-        break;
-      }
-    }
-
-    // swap the last non-zero cell with the cell to its right if that cell is zero
-    if (
-      lastMovableNonZeroCellPosition < row.length - 1 &&
-      row[lastMovableNonZeroCellPosition + 1].value === 0
-    ) {
-      swap(
-        row[lastMovableNonZeroCellPosition],
-        row[lastMovableNonZeroCellPosition + 1]
-      );
-      lastMovableNonZeroCellPosition++;
-      moveMade = MoveType.SWAP;
-      // if the cell to the right is the same as the last non-zero cell, merge them
-    } else if (
-      row[lastMovableNonZeroCellPosition].value ===
-      row[lastMovableNonZeroCellPosition + 1].value
-    ) {
-      // merge the cells
-      merge(
-        row[lastMovableNonZeroCellPosition],
-        row[lastMovableNonZeroCellPosition + 1]
-      );
-      moveMade = MoveType.MERGE;
-      // increment the score
-      setScore(score + row[lastMovableNonZeroCellPosition].value);
-    } else {
-      return moveMade;
-    }
-
-    sortCellsById(row);
-    setBoard(row);
-    return moveMade;
-  };
-
-  // we could also reverse the row and call stepRight
-
-  const stepLeft = (): MoveType => {
-    let moveMade = MoveType.NONE;
-    const row = [...board];
-    sortCellsByColumn(row);
-    let firstMovableNonZeroCellPosition = 1;
-
-    // iterate from left to right to find the first non-zero cell
-    for (let i = firstMovableNonZeroCellPosition; i < row.length; i++) {
-      if (
-        row[i].value !== 0 &&
-        (row[i - 1].value === 0 || row[i].value === row[i - 1].value)
-      ) {
-        firstMovableNonZeroCellPosition = i;
-        break;
-      }
-    }
-
-    // swap the first non-zero cell with the cell to its left if that cell is zero
-    if (
-      firstMovableNonZeroCellPosition > 0 &&
-      row[firstMovableNonZeroCellPosition - 1].value === 0
-    ) {
-      swap(
-        row[firstMovableNonZeroCellPosition],
-        row[firstMovableNonZeroCellPosition - 1]
-      );
-      firstMovableNonZeroCellPosition--;
-      moveMade = MoveType.SWAP;
-      // if the cell to the left is the same as the first non-zero cell, merge them
-    } else if (
-      row[firstMovableNonZeroCellPosition].value ===
-      row[firstMovableNonZeroCellPosition - 1].value
-    ) {
-      // merge the cells
-      merge(
-        row[firstMovableNonZeroCellPosition],
-        row[firstMovableNonZeroCellPosition - 1]
-      );
-      moveMade = MoveType.MERGE;
-      // increment the score
-      setScore(score + row[firstMovableNonZeroCellPosition].value);
-    } else {
-      return moveMade;
-    }
-
-    sortCellsById(row);
-    setBoard(row);
-    return moveMade;
-  };
-
   // moving the tiles to the right
   const moveRight = () => {
-    // recursivelly call stepRight until there are no more moves to be made
-    let move;
+    let moveMade = true;
     do {
-      move = stepRight();
-    } while (move !== MoveType.NONE);
+      // recursivelly call stepRight until there are no more moves to be made
+      const { newBoard, numberOfMoves } = stepRight(board);
+      console.log("moveRight -> numberOfMoves: ", numberOfMoves);
+      if (numberOfMoves === 0) {
+        moveMade = false;
+      } else {
+        setBoard(newBoard);
+      }
+    } while (moveMade);
   };
 
   // moving the tiles to the left
   const moveLeft = () => {
-    let move;
+    let moveMade = true;
     do {
-      move = stepLeft();
-    } while (move !== MoveType.NONE);
+      // recursivelly call stepLeft until there are no more moves to be made
+      const { newBoard, numberOfMoves } = stepLeft(board);
+      console.log("moveLeft -> numberOfMoves: ", numberOfMoves);
+      if (numberOfMoves === 0) {
+        moveMade = false;
+      } else {
+        setBoard(newBoard);
+      }
+    } while (moveMade);
   };
 
   // handling the key press
@@ -288,9 +361,9 @@ function App() {
           New Game
         </Button>
         <Box h="60px" w="240px">
-          {board.map((cell: CellInterface) => (
-            <Cell key={cell.id} cell={cell} />
-          ))}
+          {board.map((row) =>
+            row.map((cell) => <Cell key={cell.id} cell={cell} />)
+          )}
         </Box>
       </Stack>
     </>
