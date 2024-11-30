@@ -3,10 +3,10 @@
 
 import Cell from "@/components/Cell";
 import { Button } from "@/components/ui/button";
-import { BoardInterface } from "@/types";
+import { CellInterface } from "@/types";
 import {
-  getRandomPosition,
-  getRandomTileValue,
+  addFirstTiles,
+  createEmptyBoard,
   moveCellsDown,
   moveCellsLeft,
   moveCellsRight,
@@ -19,28 +19,16 @@ import "./App.css";
 
 function App() {
   // storing the game state
-  const [board, setBoard] = useState<BoardInterface>([[]]);
+  const [board, setBoard] = useState<CellInterface[]>([]);
   const [score, setScore] = useState<number>(0);
   const [won, setWon] = useState<boolean>(false);
   const [over, setOver] = useState<boolean>(false);
 
-  // starting the game with one row of 4 tiles
   const newGame = () => {
-    // create a new board with 4 empty cells with
-    const newBoard = Array.from({ length: 4 }, (_, row) =>
-      Array.from({ length: 4 }, (_, column) => ({
-        id: row * 4 + column,
-        value: 0,
-        row,
-        column,
-      }))
-    );
-    newBoard[getRandomPosition()][getRandomPosition()].value =
-      getRandomTileValue();
-    newBoard[getRandomPosition()][getRandomPosition()].value =
-      getRandomTileValue();
-    setScore(0);
+    let newBoard = createEmptyBoard();
+    newBoard = addFirstTiles(newBoard);
     setBoard(newBoard);
+    setScore(0);
   };
 
   // moving the tiles to the right
@@ -97,7 +85,6 @@ function App() {
 
   useEffect(() => {
     // // check if the game is over
-    // const flatBoard = flattenBoard(board);
     // const hasEmptyCells = flatBoard.some((cell) => cell.value === 0);
     // if (!hasEmptyCells) {
     //   setOver(true);
@@ -107,8 +94,8 @@ function App() {
     //     setWon(true);
     //   }
     // }
-    // const score = flatBoard.reduce((acc, cell) => acc + cell.value, 0);
-    // setScore(score);
+    const score = board.reduce((acc, cell) => acc + cell.value, 0);
+    setScore(score);
   }, [board]);
 
   // listening for the key press
@@ -138,9 +125,9 @@ function App() {
           padding="2"
           boxSizing="content-box"
         >
-          {board.map((row) =>
-            row.map((cell) => <Cell key={cell.id} cell={cell} />)
-          )}
+          {board.map((cell) => (
+            <Cell key={cell.id} cell={cell} />
+          ))}
         </Box>
       </Stack>
     </>

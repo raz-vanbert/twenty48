@@ -7,12 +7,3 @@ export interface CellInterface {
   row: number;
   column: number;
 }
-
-export interface RowInterface extends Array<CellInterface> {}
-export interface BoardInterface extends Array<RowInterface> {}
-
-export enum MoveType {
-  NONE,
-  SWAP,
-  MERGE,
-}
