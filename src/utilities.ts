@@ -1,4 +1,4 @@
-import { BoardInterface, CellInterface } from "@/types";
+import { CellInterface } from "@/types";
 import { orderBy } from "lodash";
 
 // swap 2 cells
@@ -16,7 +16,7 @@ export const merge = (cellA: CellInterface, cellB: CellInterface) => {
   cellB.value = 0;
 };
 
-export const flattenBoard = (board: BoardInterface): CellInterface[] => {
+export const flattenBoard = (board: CellInterface[][]): CellInterface[] => {
   return orderBy(board.flat(), ["row", "column"], ["asc", "asc"]);
 };
 
