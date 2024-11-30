@@ -11,7 +11,7 @@ import {
   moveCellsLeft,
   moveCellsRight,
   moveCellsUp,
-  spawnNewTile
+  spawnNewTile,
 } from "@/utilities";
 import { Box, Stack } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
@@ -28,26 +28,40 @@ function App() {
     let newBoard = createEmptyBoard();
     newBoard = addFirstTiles(newBoard);
     setBoard(newBoard);
+    setWon(false);
+    setOver(false);
     setScore(0);
   };
 
   // moving the tiles to the right
   const moveRight = () => {
+    if (won || over) {
+      return;
+    }
     const newBoard = moveCellsRight(board);
     setBoard(newBoard);
   };
 
   const moveLeft = () => {
+    if (won || over) {
+      return;
+    }
     const newBoard = moveCellsLeft(board);
     setBoard(newBoard);
   };
 
   const moveUp = () => {
+    if (won || over) {
+      return;
+    }
     const newBoard = moveCellsUp(board);
     setBoard(newBoard);
   };
 
   const moveDown = () => {
+    if (won || over) {
+      return;
+    }
     const newBoard = moveCellsDown(board);
     setBoard(newBoard);
   };
@@ -59,23 +73,26 @@ function App() {
 
   // handling the key press
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (won || over) return;
     switch (event.key) {
       case "ArrowUp":
         moveUp();
         spawnRandomTile();
+        updateGameStatus();
         break;
       case "ArrowDown":
         moveDown();
         spawnRandomTile();
+        updateGameStatus();
         break;
       case "ArrowLeft":
         moveLeft();
         spawnRandomTile();
+        updateGameStatus();
         break;
       case "ArrowRight":
         moveRight();
         spawnRandomTile();
+        updateGameStatus();
         break;
       case "n":
         newGame();
@@ -83,20 +100,20 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    // // check if the game is over
-    // const hasEmptyCells = flatBoard.some((cell) => cell.value === 0);
-    // if (!hasEmptyCells) {
-    //   setOver(true);
-    // } else {
-    //   const has2048 = flatBoard.some((cell) => cell.value === 2048);
-    //   if (has2048) {
-    //     setWon(true);
-    //   }
-    // }
+  const updateGameStatus = () => {
+    // check if the game is over
+    const hasEmptyCells = board.some((cell) => cell.value === 0);
+    if (!hasEmptyCells) {
+      setOver(true);
+    } else {
+      const has2048 = board.some((cell) => cell.value === 2048);
+      if (has2048) {
+        setWon(true);
+      }
+    }
     const score = board.reduce((acc, cell) => acc + cell.value, 0);
     setScore(score);
-  }, [board]);
+  };
 
   // listening for the key press
   useEffect(() => {
